@@ -7,6 +7,15 @@ admin.site.register(Location)
 admin.site.register(Worker)
 admin.site.register(Client)
 admin.site.register(Schedule)
-admin.site.register(Appointment)
 
 
+@admin.register(Appointment)
+class AppointmentAdmin(admin.ModelAdmin):
+    list_display = ('type',
+                    'worker',
+                    'location',
+                    'client',
+                    'date',
+                    'start_time',
+                    'end_time',
+                    )
