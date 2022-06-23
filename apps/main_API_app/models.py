@@ -61,6 +61,8 @@ class Client(models.Model):
 
 
 class Appointment(models.Model):
+    is_cleaned = False
+
     current_time = datetime.now()
 
     type = models.CharField(max_length=100, blank=False)
@@ -74,7 +76,8 @@ class Appointment(models.Model):
     def clean(self):
         try:
             worker_schedules = Schedule.objects.filter(worker=self.worker)
-            current_weekday = self.date.weekday()
+            current_weekday = self.date.weekday() + 1
+            print(current_weekday)
             schedule_match = False
 
             for schedule in worker_schedules:
@@ -87,7 +90,7 @@ class Appointment(models.Model):
                     break
 
             if not schedule_match:
-                raise ValidationError({"worker": f"Can't book. The {self.worker} specialist doesn't receive clients"
+                raise ValidationError({"date": f"Can't book. The {self.worker} specialist doesn't receive clients"
                                                                      f" at this day and time"})
 
             similar_appointments = Appointment.objects.filter(Q(date=self.date),
@@ -98,7 +101,7 @@ class Appointment(models.Model):
                                                               Q(start_time__range=(self.start_time, self.end_time)) |
                                                               Q(end_time__range=(self.start_time, self.end_time))
                                                               )
-
+            print(similar_appointments)
             if similar_appointments.exists():
                 for appointment in similar_appointments:
                     if self.worker == appointment.worker:
@@ -110,8 +113,11 @@ class Appointment(models.Model):
                     if self.client == appointment.client:
                         raise ValidationError({"client": f"Can't book. The {self.client} client already has"
                                                          f" an appointment at this time"})
+            self.is_cleaned = True
+
         except ObjectDoesNotExist:
             raise ValidationError('Please, fill all of the fields.')
+
 
     def __str__(self):
         return f'{self.type} ({self.client})'

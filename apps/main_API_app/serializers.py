@@ -56,7 +56,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
                   )
 
     def create(self, validated_data):
-        appointment = Appointment.objects.create(
+        appointment = Appointment(
             type=validated_data['type'],
             date=validated_data['date'],
             start_time=validated_data['start_time'],
@@ -65,16 +65,17 @@ class AppointmentSerializer(serializers.ModelSerializer):
             client=validated_data['client'],
             location=validated_data['location']
         )
+
         try:
             appointment.clean()
             appointment.save()
-
         except ValidationError as argument:
             raise serializers.ValidationError(str(argument))
 
         return appointment
 
-# New admin registration serializers
+
+# New admin registration serializer
 class RegisterAdminSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
