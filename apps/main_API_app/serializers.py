@@ -1,5 +1,7 @@
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from django.contrib.auth.models import User, Permission
+from django.db.models import Q
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
@@ -38,19 +40,39 @@ class ClientSerializer(serializers.ModelSerializer):
 class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Schedule
-        fields = ('__all__')
+        fields = '__all__'
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
         fields = ('type',
+                  'date',
                   'start_time',
                   'end_time',
                   'worker',
-                  'client'
+                  'client',
+                  'location'
                   )
 
+    def create(self, validated_data):
+        appointment = Appointment.objects.create(
+            type=validated_data['type'],
+            date=validated_data['date'],
+            start_time=validated_data['start_time'],
+            end_time=validated_data['end_time'],
+            worker=validated_data['worker'],
+            client=validated_data['client'],
+            location=validated_data['location']
+        )
+        try:
+            appointment.clean()
+            appointment.save()
+
+        except ValidationError as argument:
+            raise serializers.ValidationError(str(argument))
+
+        return appointment
 
 # New admin registration serializers
 class RegisterAdminSerializer(serializers.ModelSerializer):
