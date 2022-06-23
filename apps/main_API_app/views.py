@@ -1,11 +1,16 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from django.contrib.auth.models import User
+from rest_framework import viewsets, generics
+from rest_framework.permissions import IsAuthenticated
 
-from .serializers import WorkerSerializer, AppointmentSerializer, ClientSerializer, ScheduleSerializer, LocationSerializer
+
+from .serializers import RegisterAdminSerializer, WorkerSerializer, AppointmentSerializer,\
+    ClientSerializer, ScheduleSerializer, LocationSerializer
 from .models import Worker, Appointment, Client, Schedule, Location
+from .mixins import SuperuserRequiredMixin
 
 
-# Create your views here.
+# Basic views.
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
@@ -14,6 +19,7 @@ class WorkerViewSet(viewsets.ModelViewSet):
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class ClientViewSet(viewsets.ModelViewSet):
@@ -29,3 +35,9 @@ class ScheduleViewSet(viewsets.ModelViewSet):
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
+
+
+# Manager's views
+class RegisterAdminView(SuperuserRequiredMixin, generics.CreateAPIView):
+    queryset = User.objects.all()
+    serializer_class = RegisterAdminSerializer
