@@ -1,16 +1,9 @@
 from datetime import datetime, timedelta
 
+import django.utils.timezone
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, ObjectDoesNotExist
-
-
-class Location(models.Model):
-    name = models.CharField(max_length=100)
-    address = models.TextField(max_length=600)
-
-    def __str__(self):
-        return f'{self.name} ({self.address})'
 
 
 class Schedule(models.Model):
@@ -40,12 +33,25 @@ class Schedule(models.Model):
                                  self.from_hour, self.to_hour)
 
 
+class Location(models.Model):
+    name = models.CharField(max_length=100)
+    address = models.TextField(max_length=600)
+    work_schedule = models.ManyToManyField(Schedule)
+
+    def __str__(self):
+        return f'{self.name} ({self.address})'
+
+
 class Worker(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=100)
     specialty = models.CharField(max_length=100)
-    work_schedule = models.ManyToManyField(Schedule)
+    schedule_ids = models.JSONField(default='1', blank=True)
+    work_schedule = models.ManyToManyField(Schedule, blank=True)
+
+    class Meta:
+        unique_together = ('first_name', 'last_name', 'specialty')
 
     def __str__(self):
         return f'{self.specialty} — {self.first_name} {self.last_name}'
@@ -61,14 +67,10 @@ class Client(models.Model):
 
 
 class Appointment(models.Model):
-    is_cleaned = False
-
-    current_time = datetime.now()
-
     type = models.CharField(max_length=100, blank=False)
-    date = models.DateField(default=current_time.date(), blank=False)
-    start_time = models.TimeField(default=current_time.time(), blank=False)
-    end_time = models.TimeField(default=(datetime.now() + timedelta(hours=1)), blank=False)
+    date = models.DateField(default=django.utils.timezone.localdate, blank=False)
+    start_time = models.TimeField(default=django.utils.timezone.localtime, blank=False)
+    end_time = models.TimeField(blank=False)
     worker = models.ForeignKey('Worker', on_delete=models.CASCADE, blank=False)
     client = models.ForeignKey('Client', on_delete=models.CASCADE, blank=False)
     location = models.ForeignKey('Location', on_delete=models.CASCADE, blank=False)
@@ -77,7 +79,6 @@ class Appointment(models.Model):
         try:
             worker_schedules = Schedule.objects.filter(worker=self.worker)
             current_weekday = self.date.weekday() + 1
-            print(current_weekday)
             schedule_match = False
 
             for schedule in worker_schedules:
@@ -113,11 +114,9 @@ class Appointment(models.Model):
                     if self.client == appointment.client:
                         raise ValidationError({"client": f"Can't book. The {self.client} client already has"
                                                          f" an appointment at this time"})
-            self.is_cleaned = True
 
         except ObjectDoesNotExist:
             raise ValidationError('Please, fill all of the fields.')
-
 
     def __str__(self):
         return f'{self.type} ({self.client})'

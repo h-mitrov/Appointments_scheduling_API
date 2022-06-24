@@ -1,7 +1,9 @@
+import json
+
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from django.contrib.auth.models import User, Permission
-from django.db.models import Q
+from django.db.models import ObjectDoesNotExist
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
@@ -17,14 +19,35 @@ class LocationSerializer(serializers.ModelSerializer):
                   )
 
 
+class ScheduleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Schedule
+        fields = '__all__'
+
+
 class WorkerSerializer(serializers.ModelSerializer):
+    def create(self, validated_data):
+        try:
+            worker = Worker(**validated_data)
+            worker.save()
+            schedule_ids = [int(key) for key in json.loads(worker.schedule_ids)]
+            schedules = Schedule.objects.in_bulk(schedule_ids)
+
+            for shed in schedules:
+                worker.work_schedule.add(shed)
+        except ValidationError:
+            raise serializers.ValidationError('Sorry, an error occured. Probably, because of schedule_ids wrong format.'
+                                              'Try to pass a value like this — "[1,2,3]"')
+
+        return worker
+
     class Meta:
         model = Worker
         fields = ('first_name',
                   'last_name',
                   'phone',
                   'specialty',
-                  'work_schedule'
+                  'schedule_ids',
                   )
 
 
@@ -35,12 +58,6 @@ class ClientSerializer(serializers.ModelSerializer):
                   'last_name',
                   'phone'
                   )
-
-
-class ScheduleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Schedule
-        fields = '__all__'
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
@@ -77,10 +94,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
 # New admin registration serializer
 class RegisterAdminSerializer(serializers.ModelSerializer):
-    email = serializers.EmailField(
-        required=True,
-        validators=[UniqueValidator(queryset=User.objects.all())]
-    )
+    email = serializers.EmailField(required=True,
+                                   validators=[UniqueValidator(queryset=User.objects.all())]
+                                   )
 
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password2 = serializers.CharField(write_only=True, required=True)

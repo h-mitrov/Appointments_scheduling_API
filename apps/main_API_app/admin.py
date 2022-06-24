@@ -4,7 +4,6 @@ from .models import Location, Worker, Client, Schedule, Appointment
 
 # Register your models here.
 admin.site.register(Location)
-admin.site.register(Worker)
 admin.site.register(Client)
 admin.site.register(Schedule)
 
@@ -19,3 +18,8 @@ class AppointmentAdmin(admin.ModelAdmin):
                     'start_time',
                     'end_time',
                     )
+
+
+@admin.register(Worker)
+class WorkerAdmin(admin.ModelAdmin):
+    exclude = ('schedule_ids',)
