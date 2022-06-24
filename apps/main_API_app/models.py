@@ -36,7 +36,11 @@ class Schedule(models.Model):
 class Location(models.Model):
     name = models.CharField(max_length=100)
     address = models.TextField(max_length=600)
-    work_schedule = models.ManyToManyField(Schedule)
+    schedule_ids = models.JSONField(default='1', blank=True)
+    work_schedule = models.ManyToManyField(Schedule, blank=True)
+
+    class Meta:
+        unique_together = ('name', 'address')
 
     def __str__(self):
         return f'{self.name} ({self.address})'
@@ -77,22 +81,33 @@ class Appointment(models.Model):
 
     def clean(self):
         try:
-            worker_schedules = Schedule.objects.filter(worker=self.worker)
-            current_weekday = self.date.weekday() + 1
-            schedule_match = False
+            for parameter in self.location, self.worker:
+                schedule_match = False
 
-            for schedule in worker_schedules:
-                condition = all((schedule.weekday == current_weekday,
-                                 schedule.from_hour <= self.start_time < schedule.to_hour,
-                                 schedule.from_hour < self.end_time <= schedule.to_hour
-                                 ))
-                if condition:
-                    schedule_match = True
-                    break
+                if parameter is self.location:
+                    schedules_for_checking = Schedule.objects.filter(location=self.location)
+                    print(schedules_for_checking)
+                else:
+                    schedules_for_checking = Schedule.objects.filter(worker=self.worker)
 
-            if not schedule_match:
-                raise ValidationError({"date": f"Can't book. The {self.worker} specialist doesn't receive clients"
-                                                                     f" at this day and time"})
+                current_weekday = self.date.weekday() + 1
+
+                for schedule in schedules_for_checking:
+                    condition = all((schedule.weekday == current_weekday,
+                                     schedule.from_hour <= self.start_time < schedule.to_hour,
+                                     schedule.from_hour < self.end_time <= schedule.to_hour
+                                     ))
+                    print(schedule.weekday == current_weekday)
+                    print(schedule.weekday)
+                    print(schedule.from_hour <= self.start_time < schedule.to_hour)
+                    print(schedule.from_hour < self.end_time <= schedule.to_hour)
+
+                    if condition:
+                        schedule_match = True
+
+                if not schedule_match:
+                    raise ValidationError({"date": f"Can't book. The {parameter} can't be assigned an appointment"
+                                                                         f" at this day and time"})
 
             similar_appointments = Appointment.objects.filter(Q(date=self.date),
                                                               Q(start_time__lte=self.start_time,

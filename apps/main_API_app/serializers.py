@@ -13,11 +13,49 @@ from .models import Location, Worker, Client, Schedule, Appointment
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
-        fields = ('name',
+        fields = ('pk',
+                  'name',
                   'address',
-                  'bookings'
+                  'schedule_ids',
                   )
 
+    def create(self, validated_data):
+        try:
+            location = Location(**validated_data)
+            location.save()
+            schedule_ids = [int(key) for key in json.loads(location.schedule_ids)]
+            schedules = Schedule.objects.in_bulk(schedule_ids)
+
+            for shed in schedules:
+                location.work_schedule.add(shed)
+        except ValidationError:
+            raise serializers.ValidationError('Sorry, an error occured. Probably, because of schedule_ids wrong format.'
+                                              'Try to pass a value like this — "[1,2,3]"')
+
+        return location
+
+    def update(self, instance, validated_data):
+        previous_schedule = instance.schedule_ids
+
+        instance.name = validated_data.get('name', instance.name)
+        instance.address = validated_data.get('address', instance.address)
+        instance.schedule_ids = validated_data.get('schedule_ids', instance.schedule_ids)
+
+        if instance.schedule_ids != previous_schedule:
+            try:
+                schedule_ids = [int(key) for key in json.loads(instance.schedule_ids)]
+                schedules = Schedule.objects.in_bulk(schedule_ids)
+
+                for shed in schedules:
+                    instance.work_schedule.add(shed)
+
+            except ValidationError:
+                raise serializers.ValidationError(
+                    'Sorry, an error occured. Probably, because of schedule_ids wrong format.'
+                    'Try to pass a value like this — "[1,2,3]"')
+        instance.save()
+
+        return instance
 
 class ScheduleSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,6 +64,16 @@ class ScheduleSerializer(serializers.ModelSerializer):
 
 
 class WorkerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Worker
+        fields = ('pk',
+                  'first_name',
+                  'last_name',
+                  'phone',
+                  'specialty',
+                  'schedule_ids',
+                  )
+
     def create(self, validated_data):
         try:
             worker = Worker(**validated_data)
@@ -41,14 +89,30 @@ class WorkerSerializer(serializers.ModelSerializer):
 
         return worker
 
-    class Meta:
-        model = Worker
-        fields = ('first_name',
-                  'last_name',
-                  'phone',
-                  'specialty',
-                  'schedule_ids',
-                  )
+    def update(self, instance, validated_data):
+        previous_schedule = instance.schedule_ids
+
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.phone = validated_data.get('phone', instance.phone)
+        instance.specialty = validated_data.get('specialty', instance.specialty)
+        instance.schedule_ids = validated_data.get('schedule_ids', instance.schedule_ids)
+
+        if instance.schedule_ids != previous_schedule:
+            try:
+                schedule_ids = [int(key) for key in json.loads(instance.schedule_ids)]
+                schedules = Schedule.objects.in_bulk(schedule_ids)
+
+                for shed in schedules:
+                    instance.work_schedule.add(shed)
+
+            except ValidationError:
+                raise serializers.ValidationError(
+                    'Sorry, an error occured. Probably, because of schedule_ids wrong format.'
+                    'Try to pass a value like this — "[1,2,3]"')
+        instance.save()
+
+        return instance
 
 
 class ClientSerializer(serializers.ModelSerializer):

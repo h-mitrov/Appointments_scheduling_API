@@ -1,3 +1,4 @@
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import viewsets, generics
@@ -41,3 +42,13 @@ class LocationViewSet(viewsets.ModelViewSet):
 class RegisterAdminView(SuperuserRequiredMixin, generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterAdminSerializer
+
+
+class RetrieveUpdateDeleteWorkerView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = WorkerSerializer
+    queryset = Worker.objects.all()
+
+
+class RetrieveUpdateDeleteLocationView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = LocationSerializer
+    queryset = Location.objects.all()
