@@ -1,8 +1,6 @@
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
 from django.contrib.auth.models import User
 from rest_framework import viewsets, generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 
 
 from .serializers import RegisterAdminSerializer, WorkerSerializer, AppointmentSerializer,\
@@ -15,22 +13,25 @@ from .mixins import SuperuserRequiredMixin
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
     queryset = Appointment.objects.all()
     serializer_class = AppointmentSerializer
-    # permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated]
 
 
 class ClientViewSet(viewsets.ModelViewSet):
     queryset = Client.objects.all()
     serializer_class = ClientSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class ScheduleViewSet(viewsets.ModelViewSet):
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class LocationViewSet(viewsets.ModelViewSet):
