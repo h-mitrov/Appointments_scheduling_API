@@ -1,4 +1,5 @@
 import json
+from typing import Union
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -9,53 +10,35 @@ from django.contrib.auth.password_validation import validate_password
 
 from .models import Location, Worker, Client, Schedule, Appointment
 
+WEEKDAYS = {
+    'monday': 1,
+    'tuesday': 2,
+    'wednesday': 3,
+    'thursday': 4,
+    'friday': 5,
+    'saturday': 6,
+    'sunday': 7
+}
 
-class LocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Location
-        fields = ('pk',
-                  'name',
-                  'address',
-                  'schedule_ids',
-                  )
 
-    def create(self, validated_data):
-        try:
-            location = Location(**validated_data)
-            location.save()
-            schedule_ids = [int(key) for key in json.loads(location.schedule_ids)]
-            schedules = Schedule.objects.in_bulk(schedule_ids)
+def set_or_update_schedule(db_object: Union[Worker, Location], schedules: Union[dict, list]) -> None:
+    if isinstance(schedules, dict):
+        schedule_obj, created_status = Schedule.objects.get_or_create(
+            weekday=WEEKDAYS.get(schedules.get('weekday').lower()),
+            from_hour=schedules.get('from_hour'),
+            to_hour=schedules.get('to_hour'))
 
-            for shed in schedules:
-                location.work_schedule.add(shed)
-        except ValidationError:
-            raise serializers.ValidationError('Sorry, an error occured. Probably, because of schedule_ids wrong format.'
-                                              'Try to pass a value like this — "[1,2,3]"')
+        db_object.work_schedule.clear()
+        db_object.work_schedule.add(schedule_obj)
 
-        return location
-
-    def update(self, instance, validated_data):
-        previous_schedule = instance.schedule_ids
-
-        instance.name = validated_data.get('name', instance.name)
-        instance.address = validated_data.get('address', instance.address)
-        instance.schedule_ids = validated_data.get('schedule_ids', instance.schedule_ids)
-
-        if instance.schedule_ids != previous_schedule:
-            try:
-                schedule_ids = [int(key) for key in json.loads(instance.schedule_ids)]
-                schedules = Schedule.objects.in_bulk(schedule_ids)
-
-                for shed in schedules:
-                    instance.work_schedule.add(shed)
-
-            except ValidationError:
-                raise serializers.ValidationError(
-                    'Sorry, an error occured. Probably, because of schedule_ids wrong format.'
-                    'Try to pass a value like this — "[1,2,3]"')
-        instance.save()
-
-        return instance
+    elif isinstance(schedules, list):
+        db_object.work_schedule.clear()
+        for sched in schedules:
+            schedule_obj, created_status = Schedule.objects.get_or_create(
+                weekday=WEEKDAYS.get(sched.get('weekday').lower()),
+                from_hour=sched.get('from_hour'),
+                to_hour=sched.get('to_hour'))
+            db_object.work_schedule.add(schedule_obj)
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
@@ -72,16 +55,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
         }
 
     def to_internal_value(self, data):
-        weekdays = {
-            'monday': 1,
-            'tuesday': 2,
-            'wednesday': 3,
-            'thursday': 4,
-            'friday': 5,
-            'saturday': 6,
-            'sunday': 7
-        }
-        weekday = weekdays.get(data.get('weekday').lower())
+        weekday = WEEKDAYS.get(data.get('weekday').lower())
         from_hour = data.get('from_hour')
         to_hour = data.get('to_hour')
 
@@ -90,6 +64,52 @@ class ScheduleSerializer(serializers.ModelSerializer):
             'from_hour': from_hour,
             'to_hour': to_hour
         }
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    work_schedule = ScheduleSerializer(many=True)
+
+    class Meta:
+        model = Location
+        fields = ('pk',
+                  'name',
+                  'address',
+                  'work_schedule',
+                  )
+
+    def to_internal_value(self, data):
+        name = data.get('name')
+        address = data.get('address')
+        work_schedule = json.loads(data.get('work_schedule'))
+
+        return {'name': name,
+                'address': address,
+                'work_schedule': work_schedule
+                }
+
+    def create(self, validated_data):
+        try:
+            schedules = validated_data.pop('work_schedule')
+            location = Location(**validated_data)
+            location.save()
+            set_or_update_schedule(location, schedules)
+
+        except ValidationError:
+            raise serializers.ValidationError('Sorry, validation error occurred.')
+
+        return location
+
+    def update(self, instance, validated_data):
+        try:
+            instance.name = validated_data.get('name', instance.name)
+            instance.address = validated_data.get('address', instance.address)
+            set_or_update_schedule(instance, validated_data.get('work_schedule'))
+        except ValidationError:
+            raise serializers.ValidationError('Sorry, validation error occurred.')
+
+        instance.save()
+
+        return instance
 
 
 class WorkerSerializer(serializers.ModelSerializer):
@@ -102,7 +122,6 @@ class WorkerSerializer(serializers.ModelSerializer):
                   'last_name',
                   'phone',
                   'specialty',
-                  # 'schedule_ids',
                   'work_schedule',
                   )
 
@@ -122,44 +141,30 @@ class WorkerSerializer(serializers.ModelSerializer):
                 }
 
     def create(self, validated_data):
-        print('hello\n' * 100)
         try:
             schedules = validated_data.pop('work_schedule')
             worker = Worker(**validated_data)
             worker.save()
-
-            weekdays = {
-                'monday': 1,
-                'tuesday': 2,
-                'wednesday': 3,
-                'thursday': 4,
-                'friday': 5,
-                'saturday': 6,
-                'sunday': 7
-            }
-
-            if isinstance(schedules, dict):
-                schedule_obj, created_status = Schedule.objects.get_or_create(
-                    weekday=weekdays.get(schedules.get('weekday').lower()),
-                    from_hour=schedules.get('from_hour'),
-                    to_hour=schedules.get('to_hour'))
-
-                worker.work_schedule.clear()
-                worker.work_schedule.add(schedule_obj)
-
-            elif isinstance(schedules, list):
-                worker.work_schedule.clear()
-                for sched in schedules:
-                    schedule_obj, created_status = Schedule.objects.get_or_create(
-                        weekday=weekdays.get(sched.get('weekday').lower()),
-                        from_hour=sched.get('from_hour'),
-                        to_hour=sched.get('to_hour'))
-                    worker.work_schedule.add(schedule_obj)
+            set_or_update_schedule(worker, schedules)
 
         except ValidationError:
             raise serializers.ValidationError('Sorry, validation error occured.')
 
         return worker
+
+    def update(self, instance, validated_data):
+        try:
+            instance.first_name = validated_data.get('first_name', instance.first_name)
+            instance.last_name = validated_data.get('last_name', instance.last_name)
+            instance.phone = validated_data.get('phone', instance.phone)
+            instance.specialty = validated_data.get('specialty', instance.specialty)
+            set_or_update_schedule(instance, validated_data.get('work_schedule'))
+        except ValidationError:
+            raise serializers.ValidationError('Sorry, validation error occured.')
+
+        instance.save()
+
+        return instance
 
 
 class ClientSerializer(serializers.ModelSerializer):

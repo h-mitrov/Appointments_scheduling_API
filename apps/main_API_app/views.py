@@ -13,7 +13,7 @@ from .mixins import SuperuserRequiredMixin
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -37,19 +37,23 @@ class ScheduleViewSet(viewsets.ModelViewSet):
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
+    # permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 # Manager's views
 class RegisterAdminView(SuperuserRequiredMixin, generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegisterAdminSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class RetrieveUpdateDeleteWorkerView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WorkerSerializer
     queryset = Worker.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class RetrieveUpdateDeleteLocationView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = LocationSerializer
     queryset = Location.objects.all()
+    permission_classes = [IsAuthenticatedOrReadOnly]
