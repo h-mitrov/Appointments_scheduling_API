@@ -1,7 +1,8 @@
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.models import User
 from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
-
+from rest_framework.serializers import ValidationError
 
 from .serializers import RegisterAdminSerializer, WorkerSerializer, AppointmentSerializer,\
     ClientSerializer, ScheduleSerializer, LocationSerializer
@@ -57,3 +58,26 @@ class RetrieveUpdateDeleteLocationView(SuperuserRequiredMixin, generics.Retrieve
     serializer_class = LocationSerializer
     queryset = Location.objects.all()
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+# User's views
+class FilterWorkersView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = WorkerSerializer
+
+    def get_queryset(self):
+        date = self.request.query_params.get('date')
+        specialty = self.request.query_params.get('specialty')
+
+        if date and specialty:
+            queryset = Worker.objects.filter(specialty=specialty)
+        elif date:
+            queryset = Worker.objects.all()
+        elif specialty:
+            queryset = Worker.objects.filter(specialty=specialty)
+        else:
+            queryset = Worker.objects.all()
+        if not queryset:
+            raise ValidationError('No results. Please, try to change the day and/or location query.')
+
+        return queryset
+
