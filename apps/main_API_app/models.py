@@ -7,7 +7,7 @@ from django.db.models import Q, ObjectDoesNotExist
 
 
 class Schedule(models.Model):
-    WEEKDAYS = [
+    weekdays = [
         (1, "Monday"),
         (2, "Tuesday"),
         (3, "Wednesday"),
@@ -17,12 +17,12 @@ class Schedule(models.Model):
         (7, "Sunday"),
     ]
 
-    weekday = models.IntegerField(choices=WEEKDAYS, default='Monday')
+    weekday = models.IntegerField(choices=weekdays, default='Monday')
     from_hour = models.TimeField()
     to_hour = models.TimeField()
 
     def __str__(self):
-        return f'{self.WEEKDAYS[self.weekday - 1][1]}: {self.from_hour}—{self.to_hour}'
+        return f'{self.weekdays[self.weekday - 1][1]}: {self.from_hour}—{self.to_hour}'
 
     class Meta:
         ordering = ('weekday', 'from_hour')
@@ -81,6 +81,11 @@ class Appointment(models.Model):
 
     def clean(self):
         try:
+            # check that start is before finish
+            if self.start_time >= self.end_time:
+                raise ValidationError({"end_time": f"Can't book. Procedure end time must occur after start."})
+
+            # check if location and worker can be booked at certain day and time range
             for parameter in self.location, self.worker:
                 schedule_match = False
 
@@ -109,6 +114,7 @@ class Appointment(models.Model):
                     raise ValidationError({"date": f"Can't book. The {parameter} can't be assigned an appointment"
                                                                          f" at this day and time"})
 
+            # check if location and worker are not already booked at certain day and time
             similar_appointments = Appointment.objects.filter(Q(date=self.date),
                                                               Q(start_time__lte=self.start_time,
                                                                 end_time__gte=self.start_time) |
