@@ -20,6 +20,8 @@ class Schedule(models.Model):
     weekday = models.IntegerField(choices=weekdays, default='Monday')
     from_hour = models.TimeField()
     to_hour = models.TimeField()
+    workers = models.ManyToManyField('Worker')
+    locations = models.ManyToManyField('Location')
 
     def __str__(self):
         return f'{self.weekdays[self.weekday - 1][1]}: {self.from_hour}—{self.to_hour}'
@@ -81,6 +83,11 @@ class Appointment(models.Model):
 
     def clean(self):
         try:
+            # check that date is not in the past
+            current_date = datetime.today().date()
+            if self.date < current_date:
+                raise ValidationError({'date': f'Date can not be in the past'})
+
             # check that start is before finish
             if self.start_time >= self.end_time:
                 raise ValidationError({"end_time": f"Can't book. Procedure end time must occur after start."})
