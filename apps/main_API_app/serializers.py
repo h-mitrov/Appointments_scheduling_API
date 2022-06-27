@@ -14,13 +14,13 @@ from rest_framework.validators import UniqueValidator
 from .models import Location, Worker, Client, Schedule, Appointment
 
 WEEKDAYS = {
-    'monday': 1,
-    'tuesday': 2,
-    'wednesday': 3,
-    'thursday': 4,
-    'friday': 5,
-    'saturday': 6,
-    'sunday': 7
+    'monday': 0,
+    'tuesday': 1,
+    'wednesday': 2,
+    'thursday': 3,
+    'friday': 4,
+    'saturday': 5,
+    'sunday': 6
 }
 
 
@@ -52,7 +52,7 @@ class ScheduleSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         return {
             'pk': instance.pk,
-            'weekday': instance.weekdays[instance.weekday - 1][1],
+            'weekday': instance.weekdays[instance.weekday][1],
             'from_hour': instance.from_hour,
             'to_hour': instance.to_hour
         }
@@ -220,7 +220,8 @@ class ClientSerializer(serializers.ModelSerializer):
 class AppointmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Appointment
-        fields = ('type',
+        fields = ('pk',
+                  'type',
                   'date',
                   'start_time',
                   'end_time',
@@ -248,6 +249,22 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         return appointment
 
+    def update(self, instance, validated_data):
+        instance.type = validated_data.get('type', instance.type)
+        instance.date = validated_data.get('date', instance.date)
+        instance.start_time = validated_data.get('start_time', instance.start_time)
+        instance.end_time = validated_data.get('end_time', instance.end_time)
+        instance.worker = validated_data.get('worker', instance.worker)
+        instance.client = validated_data.get('client', instance.client)
+        instance.location = validated_data.get('location', instance.location)
+
+        try:
+            instance.clean()
+            instance.save()
+        except ValidationError as argument:
+            raise serializers.ValidationError(str(argument))
+
+        return instance
 
 # New admin registration serializer
 class UserSerializer(serializers.ModelSerializer):

@@ -14,7 +14,7 @@ from .models import Worker, Appointment, Client, Schedule, Location
 from .mixins import SuperuserRequiredMixin
 
 
-# Basic views.
+# Basic views
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
@@ -45,16 +45,23 @@ class LocationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
+# Views for working with separate instances
 class RetrieveUpdateDeleteWorkerView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
 
 class RetrieveUpdateDeleteLocationView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
+
+
+class RetrieveUpdateDeleteAppointmentView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Appointment.objects.all()
+    serializer_class = LocationSerializer
+    permission_classes = [IsAuthenticated]
 
 
 # Manager's views
@@ -65,13 +72,12 @@ class ManagerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-
         if user.is_superuser:
             return User.objects.all()
-        return User.objects.filter(username=user.username)
+        raise ValidationError({'no_rights': 'You have no permission to access this section. Only your manager can do that.'})
 
 
-class RetrieveUpdateDeleteUserView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
+class RetrieveUpdateDeleteManagerView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
