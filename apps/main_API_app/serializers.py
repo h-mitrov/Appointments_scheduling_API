@@ -1,13 +1,16 @@
+# Standard library imports
 import json
+from datetime import datetime
 from typing import Union
 
+# Third party imports
 from django.core.exceptions import ValidationError
-from rest_framework import serializers
 from django.contrib.auth.models import User, Permission
-from django.db.models import ObjectDoesNotExist
-from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
+from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
+# Local app imports
 from .models import Location, Worker, Client, Schedule, Appointment
 
 WEEKDAYS = {
@@ -114,6 +117,7 @@ class LocationSerializer(serializers.ModelSerializer):
 
 class WorkerSerializer(serializers.ModelSerializer):
     work_schedule = ScheduleSerializer(many=True)
+    available_slots = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Worker
@@ -122,21 +126,58 @@ class WorkerSerializer(serializers.ModelSerializer):
                   'last_name',
                   'phone',
                   'specialty',
+                  'available_slots',
                   'work_schedule',
                   )
+
+    def get_available_slots(self, instance):
+
+        def __generate_slots_range(start: int, stop: int) -> list:
+            slots = [f'0{slot}:00' if slot // 10 == 0 else f'{slot}:00' for slot in range(start, stop)]
+            return slots
+
+        date = self.context.get('date')
+
+        if date:
+            requested_date = datetime.strptime(date, '%Y-%m-%d').date()
+        else:
+            requested_date = datetime.today().date()
+
+        free_slots = set()
+
+        worker_schedules = Schedule.objects.filter(weekday=requested_date.weekday(),
+                                                   worker=instance.pk)
+
+        for schedule in worker_schedules:
+            slots = __generate_slots_range(schedule.from_hour.hour, schedule.to_hour.hour)
+            free_slots.update(slots)
+
+        worker_appointments = Appointment.objects.filter(worker=instance.pk,
+                                                         date=requested_date)
+        for appointment in worker_appointments:
+            booked_slots = __generate_slots_range(appointment.get_hour('start'), appointment.get_hour('end'))
+            for slot in booked_slots:
+                try:
+                    free_slots.remove(slot)
+                except KeyError:
+                    pass
+
+        return sorted(free_slots)
 
     def to_internal_value(self, data):
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         phone = data.get('phone')
         specialty = data.get('specialty')
-        work_schedule = json.loads(data.get('work_schedule'))
+        if data.get('work_schedule'):
+            work_schedule = json.loads(data.get('work_schedule'))
+        else:
+            work_schedule = None
 
         return {'first_name': first_name,
                 'last_name': last_name,
                 'phone': phone,
                 'specialty': specialty,
-                # 'schedule_ids': schedule_ids,
                 'work_schedule': work_schedule
                 }
 
@@ -209,24 +250,33 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
 
 # New admin registration serializer
-class RegisterAdminSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True,
                                    validators=[UniqueValidator(queryset=User.objects.all())]
                                    )
-
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    password2 = serializers.CharField(write_only=True, required=True)
+    repeat_password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2', 'email', 'first_name', 'last_name')
+        fields = ('username',
+                  'first_name',
+                  'last_name',
+                  'email',
+                  'id',
+                  'password',
+                  'repeat_password',
+                  )
+
+        read_only_fields = ('id',)
+
         extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True}
+            'password': {'write_only': True},
+            'repeat_password': {'write_only': True},
         }
 
     def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
+        if attrs['password'] != attrs['repeat_password']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
 
         return attrs

@@ -8,23 +8,23 @@ from django.db.models import Q, ObjectDoesNotExist
 
 class Schedule(models.Model):
     weekdays = [
-        (1, "Monday"),
-        (2, "Tuesday"),
-        (3, "Wednesday"),
-        (4, "Thursday"),
-        (5, "Friday"),
-        (6, "Saturday"),
-        (7, "Sunday"),
+        (0, "Monday"),
+        (1, "Tuesday"),
+        (2, "Wednesday"),
+        (3, "Thursday"),
+        (4, "Friday"),
+        (5, "Saturday"),
+        (6, "Sunday"),
     ]
 
     weekday = models.IntegerField(choices=weekdays, default='Monday')
     from_hour = models.TimeField()
     to_hour = models.TimeField()
-    workers = models.ManyToManyField('Worker')
-    locations = models.ManyToManyField('Location')
+    workers = models.ManyToManyField('Worker', blank=True)
+    locations = models.ManyToManyField('Location', blank=True)
 
     def __str__(self):
-        return f'{self.weekdays[self.weekday - 1][1]}: {self.from_hour}—{self.to_hour}'
+        return f'{self.weekdays[self.weekday][1]}: {self.from_hour}—{self.to_hour}'
 
     class Meta:
         ordering = ('weekday', 'from_hour')
@@ -81,6 +81,21 @@ class Appointment(models.Model):
     client = models.ForeignKey('Client', on_delete=models.CASCADE, blank=False)
     location = models.ForeignKey('Location', on_delete=models.CASCADE, blank=False)
 
+    def get_hour(self, option: str) -> str:
+        if option == 'start':
+            hour = self.start_time.hour
+
+        elif option == 'end':
+            hour = self.end_time.hour
+            minutes = self.end_time.minute
+
+            if minutes >= 10:
+                hour += 1
+        else:
+            raise ValidationError('Wrong parameter "option". Try "start" or "end".')
+
+        return hour
+
     def clean(self):
         try:
             # check that date is not in the past
@@ -102,7 +117,7 @@ class Appointment(models.Model):
                 else:
                     schedules_for_checking = Schedule.objects.filter(worker=self.worker)
 
-                current_weekday = self.date.weekday() + 1
+                current_weekday = self.date.weekday()
 
                 for schedule in schedules_for_checking:
                     condition = all((schedule.weekday == current_weekday,
@@ -133,15 +148,16 @@ class Appointment(models.Model):
             print(similar_appointments)
             if similar_appointments.exists():
                 for appointment in similar_appointments:
-                    if self.worker == appointment.worker:
-                        raise ValidationError({"worker": f"Can't book. The {self.worker} specialist is"
-                                                                     f" already booked at this time"})
-                    if self.location == appointment.location:
-                        raise ValidationError({"location": f"Can't book. The {self.location} location is"
-                                                         f" already booked at this time"})
-                    if self.client == appointment.client:
-                        raise ValidationError({"client": f"Can't book. The {self.client} client already has"
-                                                         f" an appointment at this time"})
+                    if appointment.pk != self.pk:
+                        if self.worker == appointment.worker:
+                            raise ValidationError({"worker": f"Can't book. The {self.worker} specialist is"
+                                                                         f" already booked at this time"})
+                        if self.location == appointment.location:
+                            raise ValidationError({"location": f"Can't book. The {self.location} location is"
+                                                             f" already booked at this time"})
+                        if self.client == appointment.client:
+                            raise ValidationError({"client": f"Can't book. The {self.client} client already has"
+                                                             f" an appointment at this time"})
 
         except ObjectDoesNotExist:
             raise ValidationError('Please, fill all of the fields.')

@@ -1,11 +1,12 @@
 from django.urls import include, path, re_path
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import WorkerViewSet, LocationViewSet, ScheduleViewSet, ClientViewSet, AppointmentViewSet, RegisterAdminView,\
-                   RetrieveUpdateDeleteWorkerView, RetrieveUpdateDeleteLocationView, FilterWorkersView
+from .views import WorkerViewSet, LocationViewSet, ScheduleViewSet, ClientViewSet, AppointmentViewSet, ManagerViewSet,\
+                   RetrieveUpdateDeleteWorkerView, RetrieveUpdateDeleteLocationView, FilterWorkersView, RetrieveUpdateDeleteUserView
 
 router = routers.DefaultRouter()
 router.register(r'workers', WorkerViewSet)
+router.register(r'managers', ManagerViewSet)
 router.register(r'clients', ClientViewSet)
 router.register(r'locations', LocationViewSet)
 router.register(r'appointments', AppointmentViewSet)
@@ -14,10 +15,10 @@ router.register(r'filter-specialists', FilterWorkersView, basename='Worker')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('managers/<int:id>/', RetrieveUpdateDeleteUserView.as_view(), name='adm'),
     path('workers/<int:pk>/', RetrieveUpdateDeleteWorkerView.as_view(), name='worker_get_delete_update'),
     path('locations/<int:pk>/', RetrieveUpdateDeleteLocationView.as_view(), name='location_get_delete_update'),
     re_path(r'^filter-specialists/(?P<date>)/(?P<specialty>\w+)$', FilterWorkersView.as_view({'get': 'list'}), name='filter_workers'),
     path('auth/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('register-admin/', RegisterAdminView.as_view(), name='admin_register'),
 ]

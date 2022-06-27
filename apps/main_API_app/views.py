@@ -1,11 +1,14 @@
-from datetime import datetime, date
+# Standard library imports
+from datetime import datetime
 
+# Third party imports
 from django.contrib.auth.models import User
 from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.serializers import ValidationError
 
-from .serializers import RegisterAdminSerializer, WorkerSerializer, AppointmentSerializer,\
+# Local app imports
+from .serializers import UserSerializer, WorkerSerializer, AppointmentSerializer,\
     ClientSerializer, ScheduleSerializer, LocationSerializer
 from .models import Worker, Appointment, Client, Schedule, Location
 from .mixins import SuperuserRequiredMixin
@@ -15,7 +18,7 @@ from .mixins import SuperuserRequiredMixin
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
-    # permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
@@ -39,31 +42,56 @@ class ScheduleViewSet(viewsets.ModelViewSet):
 class LocationViewSet(viewsets.ModelViewSet):
     queryset = Location.objects.all()
     serializer_class = LocationSerializer
-    # permission_classes = [IsAuthenticatedOrReadOnly]
-
-
-# Manager's views
-class RegisterAdminView(SuperuserRequiredMixin, generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = RegisterAdminSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class RetrieveUpdateDeleteWorkerView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = WorkerSerializer
     queryset = Worker.objects.all()
+    serializer_class = WorkerSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
 class RetrieveUpdateDeleteLocationView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
-    serializer_class = LocationSerializer
     queryset = Location.objects.all()
+    serializer_class = LocationSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+# Manager's views
+class ManagerViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_superuser:
+            return User.objects.all()
+        return User.objects.filter(username=user.username)
+
+
+class RetrieveUpdateDeleteUserView(SuperuserRequiredMixin, generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_superuser:
+            return User.objects.all()
+        return User.objects.filter(username=user.username)
 
 
 # User's views
 class FilterWorkersView(viewsets.ReadOnlyModelViewSet):
     serializer_class = WorkerSerializer
+
+    def get_serializer_context(self):
+        context = super(FilterWorkersView, self).get_serializer_context()
+        context.update({'date': self.request.query_params.get('date')})
+        return context
 
     def get_queryset(self):
         requested_date = self.request.query_params.get('date')
@@ -80,12 +108,12 @@ class FilterWorkersView(viewsets.ReadOnlyModelViewSet):
         specialty = self.request.query_params.get('specialty')
 
         if requested_date and specialty:
-            schedules = Schedule.objects.filter(weekday=requested_date.weekday() + 1)
+            schedules = Schedule.objects.filter(weekday=requested_date.weekday())
             schedule_pks = [sched.pk for sched in schedules]
             queryset = Worker.objects.filter(specialty__iexact=specialty,
                                              work_schedule__in=schedule_pks)
         elif requested_date:
-            schedules = Schedule.objects.filter(weekday=requested_date.weekday() + 1)
+            schedules = Schedule.objects.filter(weekday=requested_date.weekday())
             schedule_pks = [sched.pk for sched in schedules]
             queryset = Worker.objects.filter(work_schedule__in=schedule_pks)
 
@@ -96,7 +124,7 @@ class FilterWorkersView(viewsets.ReadOnlyModelViewSet):
             queryset = Worker.objects.all()
 
         if not queryset:
-            raise ValidationError('No results. Please, try to change the day and/or location query.')
+            raise ValidationError({'date or specialty': 'No results. Please, try to change the day and/or specialty query.'})
 
         return queryset
 
