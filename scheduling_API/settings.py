@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 """
 from datetime import timedelta
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,9 +24,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-_8$xlr)!gkhjoo79=7n$@0t!gc!b*n=e1+-@p&al%q3nv2n1bu'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG_STATUS') if os.environ.get('DEBUG_STATUS') else True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['appointerer.herokuapp.com']
 
 
 # Application definition
