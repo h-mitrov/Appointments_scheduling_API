@@ -11,7 +11,7 @@ To use the graphic interface, login via https://appointerer.herokuapp.com/admin
 
 ## Overview
 Here's an overview of the app:
-![App overview](https://i.ibb.co/jTjPYPs/image.png)
+![App overview](https://i.ibb.co/Jvsg25X/image.png)
 
 And this is overview of it's main entities:
 ![Main entities](https://i.ibb.co/Z81SPRs/image.png)
