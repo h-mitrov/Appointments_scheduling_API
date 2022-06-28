@@ -71,13 +71,13 @@ class Client(models.Model):
 
 
 class Appointment(models.Model):
-    type = models.CharField(max_length=100, blank=False)
+    type = models.CharField(max_length=100, blank=True, null=True)
     date = models.DateField(default=django.utils.timezone.localdate, blank=False)
     start_time = models.TimeField(default=django.utils.timezone.localtime, blank=False)
-    end_time = models.TimeField(blank=False)
-    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, blank=False)
-    client = models.ForeignKey('Client', on_delete=models.CASCADE, blank=False)
-    location = models.ForeignKey('Location', on_delete=models.CASCADE, blank=False)
+    end_time = models.TimeField(default=django.utils.timezone.localtime, blank=False)
+    worker = models.ForeignKey('Worker', on_delete=models.CASCADE, blank=True, null=True)
+    client = models.ForeignKey('Client', on_delete=models.CASCADE, blank=True, null=True)
+    location = models.ForeignKey('Location', on_delete=models.CASCADE, blank=True, null=True)
 
     def get_hour(self, option: str) -> str:
         if option == 'start':
