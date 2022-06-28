@@ -9,6 +9,13 @@ Feel free to try out the API — go to https://appointerer.herokuapp.com/
 
 To use the graphic interface, login via https://appointerer.herokuapp.com/admin
 
+## Overview
+Here's an overview of the app:
+![App overview](https://i.ibb.co/znSV645/image.png)
+
+And this is overview of it's main entities:
+![Main entities](https://i.ibb.co/Z81SPRs/image.png)
+
 ## Requirements
 * Python 3.10.0
 * Django 4.0.5
