@@ -134,7 +134,7 @@ Type the following command to your terminal:
 ```bash
     python manage.py createsuperuser
 ```
-5. Run the app:
+6. Run the app:
 ```bash
     python manage.py runserver
 ```
