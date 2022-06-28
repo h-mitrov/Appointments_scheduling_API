@@ -88,7 +88,7 @@ You'll get the tokens:
     "access": "eyJ0eMaiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNjU2NDEzNjI5LCJpYXQiOjE2NTYzOTU2MjksImp0aSI6IjZkNmQxMmU0MzM0NTQ0MTM5MTY1NzBjNmExMzM0YzEwIiwidXNlcl9pZCI6MX0.eqxmcXFE1tnRVaghdcjPfSdSnNM_d4cJcyrvUxGvSZI"
 }
 ```
-We got two tokens, the access token will be used to authenticated all the requests we need to make, this access token will expire after some time (5 hours by default). We can use the `refresh` token to request a need access token.
+We got two tokens, the access token will be used to authenticated all the requests we need to make, this access token will expire after some time (5 hours by default). We can use the `refresh` token to request a new access token.
 You'll need to pass the `refresh` as POST form-data parameter.
 ```
 https://appointerer.herokuapp.com/auth/token/
@@ -123,7 +123,11 @@ Type the following command to your terminal:
     python manage.py makemigrations
     python manage.py migrate
 ```
-4. Run the app:
+5. Create superuser:
+```bash
+    python manage.py createsuperuser
+```
+5. Run the app:
 ```bash
     python manage.py runserver
 ```
