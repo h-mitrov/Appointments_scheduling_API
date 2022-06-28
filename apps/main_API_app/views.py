@@ -18,7 +18,7 @@ from .mixins import SuperuserRequiredMixin
 class WorkerViewSet(viewsets.ModelViewSet):
     queryset = Worker.objects.all()
     serializer_class = WorkerSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
 
 
 class AppointmentViewSet(viewsets.ModelViewSet):
