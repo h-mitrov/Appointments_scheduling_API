@@ -6,6 +6,7 @@ Any feedback or advise would be really appreciated.
 
 ## Demo
 Feel free to try out the API — go to https://appointerer.herokuapp.com/
+
 To use the graphic interface, login via https://appointerer.herokuapp.com/admin
 
 ## Requirements
@@ -19,10 +20,10 @@ For Appointments, Workers, Locations, Schedules and Users, we have endpoints lik
 Endpoint |HTTP Method | CRUD Method | Result
 -- | -- |-- |--
 `workers` | GET | READ | Get all workers
-`workers/:id` | GET | READ | Get a single worker
+`workers/<id>` | GET | READ | Get a single worker
 `workers`| POST | CREATE | Create a new worker
-`workers/:id` | PUT | UPDATE | Update a worker
-`workers/:id` | DELETE | DELETE | Delete a worker
+`workers/<id>` | PUT | UPDATE | Update a worker
+`workers/<id>` | DELETE | DELETE | Delete a worker
 
 ## How to use this API
 You can test this Appointment booking API using [Postman](https://www.postman.com/) or any other tool you prefer.
@@ -93,7 +94,12 @@ You'll need to pass the `refresh` as POST form-data parameter.
 https://appointerer.herokuapp.com/auth/token/
 ```
 Make sure to include the access token to the every next request. You will be able to perform CRUD operations with Workers, Locations, Schedules, Appointments, etc.
+
+
+### Superuser rights
 If you're the superuser, you will be able to create new Administrators (they have the rights only to create, update and delete Appointments).
+For this, use the endpoint `workers/` or `workers/<id>`.
+
 
 ## How to run it locally
 To run this app locally, stick to the following guide:
