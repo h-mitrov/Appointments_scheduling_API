@@ -38,7 +38,6 @@ class Schedule(models.Model):
 class Location(models.Model):
     name = models.CharField(max_length=100)
     address = models.TextField(max_length=600)
-    schedule_ids = models.JSONField(default='1', blank=True)
     work_schedule = models.ManyToManyField(Schedule, blank=True)
 
     class Meta:
@@ -53,7 +52,6 @@ class Worker(models.Model):
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=100)
     specialty = models.CharField(max_length=100)
-    schedule_ids = models.JSONField(default='1', blank=True)
     work_schedule = models.ManyToManyField(Schedule, blank=True)
 
     class Meta:
