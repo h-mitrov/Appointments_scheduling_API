@@ -25,6 +25,12 @@ WEEKDAYS = {
 
 
 def set_or_update_schedule(db_object: Union[Worker, Location], schedules: Union[dict, list]) -> None:
+    """
+    A helper function for Worker and Location classes. It's task is to update the work_schedule field.
+    :param db_object: an instance of Worker or Location class
+    :param schedules: a list or dictionary containing schedule data
+    :return: None
+    """
     if isinstance(schedules, dict):
         schedule_obj, created_status = Schedule.objects.get_or_create(
             weekday=WEEKDAYS.get(schedules.get('weekday').lower()),
@@ -45,11 +51,17 @@ def set_or_update_schedule(db_object: Union[Worker, Location], schedules: Union[
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Schedule model.
+    """
     class Meta:
         model = Schedule
         fields = '__all__'
 
     def to_representation(self, instance):
+        """
+        Defines how deserialized Schedule data is displayed.
+        """
         return {
             'pk': instance.pk,
             'weekday': instance.weekdays[instance.weekday][1],
@@ -58,6 +70,10 @@ class ScheduleSerializer(serializers.ModelSerializer):
         }
 
     def to_internal_value(self, data):
+        """
+        Receives data from request, and transforms it to a valid data,
+        which can be used to create or update the instance.
+        """
         weekday = WEEKDAYS.get(data.get('weekday').lower())
         from_hour = data.get('from_hour')
         to_hour = data.get('to_hour')
@@ -70,6 +86,9 @@ class ScheduleSerializer(serializers.ModelSerializer):
 
 
 class LocationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Location model.
+    """
     work_schedule = ScheduleSerializer(many=True)
 
     class Meta:
@@ -81,6 +100,10 @@ class LocationSerializer(serializers.ModelSerializer):
                   )
 
     def to_internal_value(self, data):
+        """
+        Receives data from request, and transforms it to a valid data,
+        which can be used to create or update the instance.
+        """
         name = data.get('name')
         address = data.get('address')
         work_schedule = json.loads(data.get('work_schedule'))
@@ -91,6 +114,9 @@ class LocationSerializer(serializers.ModelSerializer):
                 }
 
     def create(self, validated_data):
+        """
+        Overwrites the default method to properly process the data when creating a new object.
+        """
         try:
             schedules = validated_data.pop('work_schedule')
             location = Location(**validated_data)
@@ -103,6 +129,9 @@ class LocationSerializer(serializers.ModelSerializer):
         return location
 
     def update(self, instance, validated_data):
+        """
+        Overwrites the default method to properly process the data when updating the object.
+        """
         try:
             instance.name = validated_data.get('name', instance.name)
             instance.address = validated_data.get('address', instance.address)
@@ -116,6 +145,9 @@ class LocationSerializer(serializers.ModelSerializer):
 
 
 class WorkerSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Worker model.
+    """
     work_schedule = ScheduleSerializer(many=True)
     available_slots = serializers.SerializerMethodField(read_only=True)
 
@@ -130,10 +162,20 @@ class WorkerSerializer(serializers.ModelSerializer):
                   'work_schedule',
                   )
 
-    def get_available_slots(self, instance):
-
-        def __generate_slots_range(start: int, stop: int) -> list:
-            slots = [f'0{slot}:00' if slot // 10 == 0 else f'{slot}:00' for slot in range(start, stop)]
+    def get_available_slots(self, instance) -> list:
+        """
+        Function that is used to retrieve Worker's available slots for today.
+        :param instance: Worker class instance
+        :return: free slots (list)
+        """
+        def __generate_slots_range(start: int, stop: int) -> set:
+            """
+            Small function for time data conversion.
+            :param start: start_time (int)
+            :param stop: end_time (int)
+            :return: list
+            """
+            slots = {f'0{slot}:00' if slot // 10 == 0 else f'{slot}:00' for slot in range(start, stop)}
             return slots
 
         date = self.context.get('date')
@@ -165,6 +207,10 @@ class WorkerSerializer(serializers.ModelSerializer):
         return sorted(free_slots)
 
     def to_internal_value(self, data):
+        """
+        Receives data from request, and transforms it to a valid data,
+        which can be used to create or update the instance.
+        """
         first_name = data.get('first_name')
         last_name = data.get('last_name')
         phone = data.get('phone')
@@ -182,6 +228,9 @@ class WorkerSerializer(serializers.ModelSerializer):
                 }
 
     def create(self, validated_data):
+        """
+        Overwrites the default method to properly process the data when creating a new object.
+        """
         try:
             schedules = validated_data.pop('work_schedule')
             worker = Worker(**validated_data)
@@ -194,6 +243,9 @@ class WorkerSerializer(serializers.ModelSerializer):
         return worker
 
     def update(self, instance, validated_data):
+        """
+        Overwrites the default method to properly process the data when updating the object.
+        """
         try:
             instance.first_name = validated_data.get('first_name', instance.first_name)
             instance.last_name = validated_data.get('last_name', instance.last_name)
@@ -209,6 +261,9 @@ class WorkerSerializer(serializers.ModelSerializer):
 
 
 class ClientSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Client model.
+    """
     class Meta:
         model = Client
         fields = ('first_name',
@@ -218,6 +273,9 @@ class ClientSerializer(serializers.ModelSerializer):
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for Appointment model.
+    """
     class Meta:
         model = Appointment
         fields = ('pk',
@@ -231,6 +289,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
                   )
 
     def create(self, validated_data):
+        """
+        Overwrites the default method to properly process the data when creating a new object.
+        """
         appointment = Appointment(
             type=validated_data['type'],
             date=validated_data['date'],
@@ -250,6 +311,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
         return appointment
 
     def update(self, instance, validated_data):
+        """
+        Overwrites the default method to properly process the data when updating the object.
+        """
         instance.type = validated_data.get('type', instance.type)
         instance.date = validated_data.get('date', instance.date)
         instance.start_time = validated_data.get('start_time', instance.start_time)
@@ -266,8 +330,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
         return instance
 
+
 # New admin registration serializer
 class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for User model.
+    """
     email = serializers.EmailField(required=True,
                                    validators=[UniqueValidator(queryset=User.objects.all())]
                                    )
@@ -293,12 +361,18 @@ class UserSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
+        """
+        Validates the user password, as well as other data.
+        """
         if attrs['password'] != attrs['repeat_password']:
             raise serializers.ValidationError({"password": "Password fields didn't match."})
 
         return attrs
 
     def create(self, validated_data):
+        """
+        Overwrites the default method to properly process the data when creating a new object.
+        """
         user = User.objects.create_user(
             username=validated_data['username'],
             password=validated_data['password'],

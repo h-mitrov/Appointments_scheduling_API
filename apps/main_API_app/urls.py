@@ -1,6 +1,9 @@
+# Third party imports
 from django.urls import include, path, re_path
 from rest_framework import routers
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
+# Local app imports
 from .views import WorkerViewSet, LocationViewSet, ScheduleViewSet, ClientViewSet, AppointmentViewSet, ManagerViewSet, \
     RetrieveUpdateDeleteWorkerView, RetrieveUpdateDeleteLocationView, FilterWorkersView, \
     RetrieveUpdateDeleteManagerView, RetrieveUpdateDeleteAppointmentView

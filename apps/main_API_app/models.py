@@ -1,5 +1,7 @@
-from datetime import datetime, timedelta
+# Standard library imports
+from datetime import datetime
 
+# Third party imports
 import django.utils.timezone
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -7,6 +9,9 @@ from django.db.models import Q, ObjectDoesNotExist
 
 
 class Schedule(models.Model):
+    """
+    Model for Schedule.
+    """
     weekdays = [
         (0, "Monday"),
         (1, "Tuesday"),
@@ -36,6 +41,9 @@ class Schedule(models.Model):
 
 
 class Location(models.Model):
+    """
+    Model for Location.
+    """
     name = models.CharField(max_length=100)
     address = models.TextField(max_length=600)
     work_schedule = models.ManyToManyField(Schedule, blank=True)
@@ -48,6 +56,9 @@ class Location(models.Model):
 
 
 class Worker(models.Model):
+    """
+    Model for Worker.
+    """
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=100)
@@ -62,6 +73,9 @@ class Worker(models.Model):
 
 
 class Client(models.Model):
+    """
+    Model for Client. It doesn't inherit from User, so clients can't login to the API or admin panel.
+    """
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     phone = models.CharField(max_length=100)
@@ -71,6 +85,9 @@ class Client(models.Model):
 
 
 class Appointment(models.Model):
+    """
+    Model for Appointment. The most important data validation functionality is written in its clean() method.
+    """
     type = models.CharField(max_length=100, blank=True, null=True)
     date = models.DateField(default=django.utils.timezone.localdate, blank=False)
     start_time = models.TimeField(default=django.utils.timezone.localtime, blank=False)
